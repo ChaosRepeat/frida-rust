@@ -10,8 +10,10 @@
     allow(clippy::unnecessary_cast)
 )]
 
+extern crate alloc;
 use {
     crate::MemoryRange,
+    alloc::string::String,
     core::{
         ffi::{c_void, CStr},
         marker::PhantomData,
@@ -23,7 +25,7 @@ use {
 use alloc::boxed::Box;
 
 /// The memory protection of an unassociated page.
-#[derive(FromPrimitive)]
+#[derive(Clone, FromPrimitive)]
 #[repr(u32)]
 pub enum PageProtection {
     NoAccess = gum_sys::_GumPageProtection_GUM_PAGE_NO_ACCESS as u32,
@@ -40,38 +42,49 @@ pub enum PageProtection {
 }
 
 /// The file association to a page.
+#[derive(Clone)]
 pub struct FileMapping<'a> {
-    file_mapping: *const gum_sys::GumFileMapping,
+    path: String,
+    size: usize,
+    offset: u64,
     phantom: PhantomData<&'a gum_sys::GumFileMapping>,
 }
 
 impl<'a> FileMapping<'a> {
-    pub(crate) fn from_raw(file: *const gum_sys::GumFileMapping) -> Self {
-        Self {
-            file_mapping: file,
-            phantom: PhantomData,
+    pub(crate) fn from_raw(file: *const gum_sys::GumFileMapping) -> Option<Self> {
+        if file.is_null() {
+            None
+        } else {
+            Some(unsafe {
+                Self {
+                    path: CStr::from_ptr((*file).path).to_string_lossy().into_owned(),
+                    size: (*file).size as usize,
+                    offset: (*file).offset,
+                    phantom: PhantomData,
+                }
+            })
         }
     }
 
     /// The path of the file mapping on disk.
     pub fn path(&self) -> &str {
-        unsafe { CStr::from_ptr((*self.file_mapping).path).to_str().unwrap() }
+        &self.path
     }
 
     /// The offset into the file mapping.
     pub fn offset(&self) -> u64 {
-        unsafe { (*self.file_mapping).offset }
+        self.offset
     }
 
     /// The size of the mapping.
-    pub fn size(&self) -> u64 {
-        unsafe { (*self.file_mapping).size as u64 }
+    pub fn size(&self) -> usize {
+        self.size as usize
     }
 }
 
-struct SaveRangeDetailsByAddressContext {
+struct SaveRangeDetailsByAddressContext<'a> {
     address: u64,
-    details: *const gum_sys::GumRangeDetails,
+    details: Option<RangeDetails<'a>>,
 }
 
 unsafe extern "C" fn save_range_details_by_address(
@@ -83,7 +96,7 @@ unsafe extern "C" fn save_range_details_by_address(
     let start = (*range).base_address as u64;
     let end = start + (*range).size as u64;
     if start <= context.address && context.address < end {
-        context.details = details;
+        context.details = Some(RangeDetails::from_raw(details));
         return 0;
     }
 
@@ -104,15 +117,21 @@ unsafe extern "C" fn enumerate_ranges_stub(
 
 /// Details a range of virtual memory.
 pub struct RangeDetails<'a> {
-    range_details: *const gum_sys::GumRangeDetails,
+    range: MemoryRange,
+    protection: PageProtection,
+    file: Option<FileMapping<'a>>,
     phantom: PhantomData<&'a gum_sys::GumRangeDetails>,
 }
 
 impl<'a> RangeDetails<'a> {
     pub(crate) fn from_raw(range_details: *const gum_sys::GumRangeDetails) -> Self {
-        Self {
-            range_details,
-            phantom: PhantomData,
+        unsafe {
+            Self {
+                range: MemoryRange::from_raw((*range_details).range),
+                protection: num::FromPrimitive::from_u32((*range_details).protection).unwrap(),
+                file: FileMapping::from_raw((*range_details).file),
+                phantom: PhantomData,
+            }
         }
     }
 
@@ -120,7 +139,7 @@ impl<'a> RangeDetails<'a> {
     pub fn with_address(address: u64) -> Option<RangeDetails<'a>> {
         let mut context = SaveRangeDetailsByAddressContext {
             address,
-            details: core::ptr::null_mut(),
+            details: None,
         };
         unsafe {
             gum_sys::gum_process_enumerate_ranges(
@@ -130,11 +149,7 @@ impl<'a> RangeDetails<'a> {
             );
         }
 
-        if !context.details.is_null() {
-            Some(RangeDetails::from_raw(context.details))
-        } else {
-            None
-        }
+        context.details
     }
 
     /// Enumerate all ranges which match the given [`PageProtection`], calling the callback
@@ -154,21 +169,16 @@ impl<'a> RangeDetails<'a> {
 
     /// The range of memory that is detailed.
     pub fn memory_range(&self) -> MemoryRange {
-        unsafe { MemoryRange::from_raw((*self.range_details).range) }
+        self.range.clone()
     }
 
     /// The page protection of the range.
     pub fn protection(&self) -> PageProtection {
-        let protection = unsafe { (*self.range_details).protection };
-        num::FromPrimitive::from_u32(protection).unwrap()
+        self.protection.clone()
     }
 
     /// The associated file mapping, if present.
     pub fn file_mapping(&self) -> Option<FileMapping> {
-        if self.range_details.is_null() {
-            None
-        } else {
-            Some(unsafe { FileMapping::from_raw((*self.range_details).file) })
-        }
+        self.file.clone()
     }
 }
