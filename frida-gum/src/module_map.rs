@@ -20,11 +20,6 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec::Vec,
-};
 
 #[cfg(feature = "module-names")]
 use std::path::Path;

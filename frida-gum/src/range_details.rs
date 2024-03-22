@@ -13,7 +13,6 @@
 extern crate alloc;
 use {
     crate::MemoryRange,
-    alloc::string::String,
     core::{
         ffi::{c_void, CStr},
         marker::PhantomData,
@@ -22,7 +21,6 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
-use alloc::boxed::Box;
 
 /// The memory protection of an unassociated page.
 #[derive(Clone, FromPrimitive)]

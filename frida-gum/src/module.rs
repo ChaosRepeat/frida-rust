@@ -22,7 +22,6 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 extern "C" fn enumerate_ranges_callout(
     range_details: *const gum_sys::_GumRangeDetails,

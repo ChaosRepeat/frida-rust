@@ -73,7 +73,6 @@ use core::{
 };
 
 #[cfg(not(feature = "module-names"))]
-use alloc::string::String;
 
 pub mod stalker;
 
