@@ -20,6 +20,7 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
+
 #[cfg(feature = "module-names")]
 use std::path::Path;
 
