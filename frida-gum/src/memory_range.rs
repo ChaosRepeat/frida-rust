@@ -12,6 +12,7 @@ use core::{
 };
 
 #[cfg(not(feature = "module-names"))]
+use alloc::vec::Vec;
 
 pub struct MatchPattern {
     pub(crate) internal: *mut gum_sys::GumMatchPattern,

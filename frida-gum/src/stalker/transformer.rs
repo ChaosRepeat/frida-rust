@@ -11,6 +11,7 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
+use alloc::boxed::Box;
 
 pub struct StalkerIterator<'a> {
     iterator: *mut frida_gum_sys::GumStalkerIterator,

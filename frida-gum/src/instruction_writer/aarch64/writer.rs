@@ -8,6 +8,7 @@ use {
 };
 
 #[cfg(not(feature = "module-names"))]
+use alloc::vec::Vec;
 
 /// The Aarch64 instruction writer.
 pub struct Aarch64InstructionWriter {
