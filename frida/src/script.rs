@@ -104,7 +104,32 @@ impl<'a> Script<'a> {
 
         Ok(())
     }
-}
+   
+    /// Call an exported RPC function
+    ///
+    ///
+    pub fn rpc_post(&self, function_name: &str, request_id: usize, _values: &str) {
+        let frida_rpc = FridaRPC::default();
+        let message = vec![
+            frida_rpc.kind,
+            request_id.to_string(),
+            frida_rpc.operation,
+            function_name.to_string(),
+        ];
+
+        let serialized_msg = serde_json::to_string(&message).expect("could not serialize message");
+        let json = CString::new(serialized_msg).expect("couldn't make CString from serialized message");
+        unsafe { frida_sys::frida_script_post(self.script_ptr,  json.as_ptr(), core::ptr::null_mut()) }
+
+    }
+
+    // pub fn post(&self, json:&str, data: *mut _GBytes ) {
+
+        // unsafe { frida_sys::frida_script_post(self.script_ptr, "".to_string().as_mut_vec(), data)};
+    }
+
+// }
+
 
 impl<'a> Drop for Script<'a> {
     fn drop(&mut self) {
@@ -180,5 +205,16 @@ impl Drop for ScriptOption {
                 &mut self.ptr as *mut *mut frida_sys::_FridaScriptOptions as _,
             )
         }
+    }
+}
+/// values needed for an RPC call
+pub struct FridaRPC {
+    kind: String,
+    operation: String,
+}
+
+impl Default for FridaRPC {
+    fn default() -> Self {
+        FridaRPC { kind: "frida:rpc".to_string(), operation: "call".to_string() }
     }
 }
