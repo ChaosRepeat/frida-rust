@@ -104,10 +104,10 @@ impl<'a> Script<'a> {
 
         Ok(())
     }
-   
+
     /// Call an exported RPC function
-    /// 
-    /// 
+    ///
+    ///
     pub fn rpc_post(&self, function_name: &str, request_id: usize, _values: &str) {
         let frida_rpc = FridaRPC::default();
         let message = vec![
@@ -118,9 +118,11 @@ impl<'a> Script<'a> {
         ];
 
         let serialized_msg = serde_json::to_string(&message).expect("could not serialize message");
-        let json = CString::new(serialized_msg).expect("couldn't make CString from serialized message");
-        unsafe { frida_sys::frida_script_post(self.script_ptr,  json.as_ptr(), core::ptr::null_mut()) }
-
+        let json =
+            CString::new(serialized_msg).expect("couldn't make CString from serialized message");
+        unsafe {
+            frida_sys::frida_script_post(self.script_ptr, json.as_ptr(), core::ptr::null_mut())
+        }
     }
 }
 
@@ -208,6 +210,9 @@ pub struct FridaRPC {
 
 impl Default for FridaRPC {
     fn default() -> Self {
-        FridaRPC { kind: "frida:rpc".to_string(), operation: "call".to_string() }
+        FridaRPC {
+            kind: "frida:rpc".to_string(),
+            operation: "call".to_string(),
+        }
     }
 }
