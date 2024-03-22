@@ -106,8 +106,8 @@ impl<'a> Script<'a> {
     }
    
     /// Call an exported RPC function
-    ///
-    ///
+    /// 
+    /// 
     pub fn rpc_post(&self, function_name: &str, request_id: usize, _values: &str) {
         let frida_rpc = FridaRPC::default();
         let message = vec![
@@ -122,14 +122,7 @@ impl<'a> Script<'a> {
         unsafe { frida_sys::frida_script_post(self.script_ptr,  json.as_ptr(), core::ptr::null_mut()) }
 
     }
-
-    // pub fn post(&self, json:&str, data: *mut _GBytes ) {
-
-        // unsafe { frida_sys::frida_script_post(self.script_ptr, "".to_string().as_mut_vec(), data)};
-    }
-
-// }
-
+}
 
 impl<'a> Drop for Script<'a> {
     fn drop(&mut self) {
